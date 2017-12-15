@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+import scrapy
+from movie_mongo.items import MovieMongoItem
+
+
+class FilmSpider(scrapy.Spider):
+    name = 'film'
+    allowed_domains = ["movie.douban.com"]
+    start = 0
+    url = 'https://movie.douban.com/top250?start='
+    end = '&filter='
+    start_urls = [url + str(start) + end]
+
+    def parse(self, response):
+        item = MovieMongoItem()
+        movies = response.xpath("//div[@class=\'info\']")
+
+        for each in movies:
+            title = each.xpath('div[@class="hd"]/a/span[@class="title"]/text()').extract()
+            score = each.xpath('div[@class="bd"]/div[@class="star"]/span[@class="rating_num"]/text()').extract()
+            info = each.xpath('div[@class="bd"]/p[@class="quote"]/span/text()').extract()
+
+            item['title'] = title
+            item['score'] = score
+            item['info'] = info
+            # 提交item
+
+            yield item
+
+        if self.start <= 250:
+            self.start += 25
+            yield scrapy.Request(self.url + str(self.start) + self.end, callback=self.parse)
+        else:
+            return
+
+
